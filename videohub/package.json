@@ -1,0 +1,41 @@
+{
+  "name": "videohub",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "tsx --env-file=.env worker/transcode.ts",
+    "cleanup": "tsx --env-file=.env scripts/cleanup.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1162.0",
+    "@aws-sdk/s3-request-presigner": "^3.1162.0",
+    "@prisma/client": "^6.19.3",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.41.0",
+    "bcryptjs": "^3.0.3",
+    "hls.js": "^1.7.4",
+    "next": "16.4.5",
+    "next-auth": "^5.0.0-beta.32",
+    "nodemailer": "^8.0.11",
+    "prisma": "^6.19.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true,
+    "esbuild@0.28.2": true
+  }
+}

@@ -1,0 +1,36 @@
+# Local Postgres + MinIO (S3-compatible storage). Start with: docker compose up -d
+# Compose reads the .env file in this folder, so S3_KEY / S3_SECRET / MINIO_CORS_ORIGIN there apply here too.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: videohub
+      POSTGRES_PASSWORD: videohub
+      POSTGRES_DB: videohub
+    ports: ["5432:5432"]
+    volumes: ["dbdata:/var/lib/postgresql/data"]
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET:-minioadmin}
+      MINIO_API_CORS_ALLOW_ORIGIN: "${MINIO_CORS_ORIGIN:-http://localhost:3000}"
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["miniodata:/data"]
+
+  # One-shot job: creates the bucket and makes only videos/* publicly readable (raw uploads stay private).
+  minio-init:
+    image: quay.io/minio/mc
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${S3_KEY:-minioadmin} ${S3_SECRET:-minioadmin}; do sleep 1; done;
+      mc mb -p local/videohub;
+      mc anonymous set download local/videohub/videos;
+      exit 0;"
+
+volumes:
+  dbdata:
+  miniodata:

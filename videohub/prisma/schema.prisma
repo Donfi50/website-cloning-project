@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VideoStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+  REMOVED
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  passwordHash String
+  emailVerified DateTime?
+  passwordChangedAt DateTime?
+  uploadEmails Boolean   @default(true)
+  suspendedAt DateTime?
+  suspendedReason String?
+  tokens    EmailToken[]
+  role      Role      @default(USER)
+  videos    Video[]
+  comments  Comment[]
+  likes     Like[]
+  playlists Playlist[]
+  appeals   Appeal[]
+  createdAt DateTime  @default(now())
+}
+
+model Video {
+  id          String      @id @default(cuid())
+  title       String
+  description String      @default("")
+  status      VideoStatus @default(UPLOADING)
+  rawKey      String
+  hlsPath     String?
+  thumbPath   String?
+  removedReason String?
+  removedAt   DateTime?
+  views       Int         @default(0)
+  owner       User        @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  tags        String[]
+  comments    Comment[]
+  reports     Report[]
+  likes       Like[]
+  playlistItems PlaylistItem[]
+  appeals     Appeal[]
+  createdAt   DateTime    @default(now())
+  @@index([status, createdAt])
+  @@index([tags], type: Gin)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  video     Video    @relation(fields: [videoId], references: [id])
+  videoId   String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  reason    String
+  video     Video    @relation(fields: [videoId], references: [id])
+  videoId   String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmailToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  type      String   @default("verify") // verify | reset
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+}
+
+model Like {
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId   String
+  createdAt DateTime @default(now())
+  @@id([userId, videoId])
+  @@index([videoId])
+}
+
+model Playlist {
+  id        String         @id @default(cuid())
+  name      String
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId   String
+  items     PlaylistItem[]
+  createdAt DateTime       @default(now())
+  @@index([ownerId])
+}
+
+model PlaylistItem {
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId String
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId    String
+  addedAt    DateTime @default(now())
+  @@id([playlistId, videoId])
+  @@index([videoId])
+}
+
+// Moderator/admin actions. No foreign keys on purpose: entries must outlive the accounts and videos they mention.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorEmail String
+  action     String   // video_removed | report_dismissed | user_suspended | user_unsuspended | role_changed
+  targetType String   // video | report | user
+  targetId   String
+  detail     String?
+  createdAt  DateTime @default(now())
+  @@index([createdAt])
+}
+
+// An uploader's appeal against a moderator removal. One per removal (see /api/appeals).
+model Appeal {
+  id           String    @id @default(cuid())
+  video        Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  videoId      String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  message      String
+  status       String    @default("OPEN") // OPEN | GRANTED | UPHELD
+  decisionNote String?
+  decidedBy    String?   // moderator's email at the time of the decision
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  @@index([status, createdAt])
+  @@index([videoId])
+}

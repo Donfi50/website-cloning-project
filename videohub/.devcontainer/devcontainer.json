@@ -1,0 +1,12 @@
+{
+  "name": "VideoHub",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "features": { "ghcr.io/devcontainers/features/docker-in-docker:2": {} },
+  "forwardPorts": [3000, 9000, 9001],
+  "portsAttributes": {
+    "3000": { "label": "App", "onAutoForward": "openBrowser" },
+    "9000": { "label": "Storage: set to Public" },
+    "9001": { "label": "MinIO console" }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}
